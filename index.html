@@ -4,14 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- =========================================
-         PROTEÇÕES DE SEGURANÇA (HEADERS)
-         ========================================= -->
-    <!-- Content Security Policy: Impede injeção de XSS e carregamento de fontes não autorizadas -->
+    
+    <!-- Impede injeção de XSS e carregamento de fontes não autorizadas -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://ajax.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self' https://formspree.io; frame-src 'self';">
     <!-- Bloqueia ataques de sniffing de MIME type -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <!-- Proteção contra Clickjacking (impede que seu site abra em iframes de terceiros) -->
+    <!-- Proteção contra Clickjacking (impede que abra em iframes de terceiros) -->
     <meta http-equiv="X-Frame-Options" content="DENY">
     
     <title>Victor Alecrim | Portfólio</title>
@@ -392,7 +390,7 @@
         .card-box h3 { font-size: 22px; margin-bottom: 10px; font-family: var(--font-inter); color: var(--text-color); transition: color 0.3s;}
         .card-box p { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
 
-        /* TECH STACK (Estilo Grade) */
+        /* TECH STACK */
 
         .tech-category-card {
             background: var(--surface-card);
