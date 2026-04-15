@@ -3,6 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- =========================================
+         PROTEÇÕES DE SEGURANÇA (HEADERS)
+         ========================================= -->
+    <!-- Content Security Policy: Impede injeção de XSS e carregamento de fontes não autorizadas -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://ajax.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self' https://formspree.io; frame-src 'self';">
+    <!-- Bloqueia ataques de sniffing de MIME type -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <!-- Proteção contra Clickjacking (impede que seu site abra em iframes de terceiros) -->
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    
     <title>Victor Alecrim | Portfólio</title>
     
     <!-- Fontes -->
@@ -117,7 +128,7 @@
             left: 0;
             width: 100%;
             height: 100vh;
-            background-color: #0b0b0b; /* Fundo escuro para destacar a imagem */
+            background-color: #0b0b0b; 
             z-index: 999999;
             display: flex;
             justify-content: center;
@@ -137,7 +148,7 @@
             opacity: 0;
             transform: translateY(20px);
             animation: splashFadeIn 0.8s ease forwards;
-            filter: drop-shadow(0 0 15px rgba(229, 192, 106, 0.3)); /* Efeito de brilho opcional */
+            filter: drop-shadow(0 0 15px rgba(229, 192, 106, 0.3)); 
         }
 
         @keyframes splashFadeIn {
@@ -550,6 +561,15 @@
         }
         .input-box textarea { resize: none; height: 160px; }
         .contact-form .btn { align-self: flex-start; padding: 15px 30px; font-size: 16px; border: none; }
+        
+        /* Honeypot invisível */
+        .visually-hidden {
+            position: absolute !important;
+            height: 1px;
+            width: 1px;
+            overflow: hidden;
+            clip: rect(1px, 1px, 1px, 1px);
+        }
 
     </style>
 </head>
@@ -853,10 +873,13 @@
                     </a>
                 </div>
 
-                <!-- Coluna Direita: Formulário Formspree -->
+                <!-- Coluna Direita: Formulário Formspree com Proteções -->
 
-                <form action="https://formspree.io/f/mbdqjzer" method="POST" class="contact-form reveal">
+                <form action="https://formspree.io/f/mbdqjzer" method="POST" class="contact-form reveal" id="secure-contact-form">
                     <h3>Envie sua mensagem</h3>
+                    
+                    <!-- Campo Honeypot (Anti-Bot): Escondido para humanos, mas os bots costumam preencher -->
+                    <input type="text" name="_gotcha" class="visually-hidden" tabindex="-1" autocomplete="off">
                     
                     <div class="input-box">
                         <input type="text" name="nome" placeholder="Seu Nome" required>
@@ -870,7 +893,7 @@
                         <textarea name="mensagem" placeholder="Sua mensagem..." required></textarea>
                     </div>
                     
-                    <button type="submit" class="btn">Enviar Mensagem</button>
+                    <button type="submit" class="btn" id="submit-btn">Enviar Mensagem</button>
                 </form>
 
             </div>
@@ -882,31 +905,81 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
 
     <script>
+        "use strict"; // Modo estrito do JavaScript ativado para prevenir erros silenciosos
+
+        // PROTEÇÕES DO FORMULÁRIO (XSS & Rate Limit)
+        
+        document.addEventListener("DOMContentLoaded", () => {
+            const contactForm = document.getElementById('secure-contact-form');
+            const submitBtn = document.getElementById('submit-btn');
+
+            if (contactForm) {
+                contactForm.addEventListener('submit', function(e) {
+                    
+                    // Honeypot Check (Se o bot preencheu o campo invisível, cancela o envio)
+                    const honeypot = document.querySelector('input[name="_gotcha"]');
+                    if (honeypot && honeypot.value !== "") {
+                        e.preventDefault();
+                        alert("Atividade suspeita detectada. Envio bloqueado.");
+                        return;
+                    }
+
+                    // Rate Limit (Evita SPAM pelo mesmo usuário)
+                    const lastSubmitTime = localStorage.getItem('lastFormSubmit');
+                    const currentTime = new Date().getTime();
+                    
+                    if (lastSubmitTime) {
+                        const timeDifference = currentTime - parseInt(lastSubmitTime);
+                        // Limite de 60 segundos (60000 ms) entre os envios
+                        if (timeDifference < 60000) {
+                            e.preventDefault();
+                            alert("Você está enviando mensagens rápido demais. Aguarde 1 minuto e tente novamente.");
+                            return;
+                        }
+                    }
+
+                    // Anti-XSS
+                    const inputs = contactForm.querySelectorAll('input:not([type="hidden"]):not(.visually-hidden), textarea');
+                    inputs.forEach(input => {
+                        // Remove qualquer coisa parecida com <tag> ou </tag>
+                        input.value = input.value.replace(/<[^>]*>?/gm, ''); 
+                    });
+                    localStorage.setItem('lastFormSubmit', currentTime.toString());
+                    
+                    // Feedback visual (opcional) para evitar multi-clique
+                    submitBtn.innerText = "Enviando...";
+                    submitBtn.style.opacity = "0.7";
+                    submitBtn.style.pointerEvents = "none";
+                });
+            }
+        });
+
         window.addEventListener('load', () => {
             // Tempo total de visualização da Splash Screen (1500ms = 1.5s)
             setTimeout(() => {
                 const splash = document.getElementById('splash-screen');
-                // Adiciona a classe que faz a animação de subir e sumir
-                splash.classList.add('hide');
-                // Libera o scroll da página
-                document.body.classList.remove('no-scroll');
+                if (splash) {
+                    splash.classList.add('hide');
+                    document.body.classList.remove('no-scroll');
+                }
             }, 1500); 
         });
 
         const themeToggleBtn = document.getElementById('theme-toggle');
-        const themeIcon = themeToggleBtn.querySelector('i');
-
-        themeToggleBtn.addEventListener('click', () => {
-            document.body.classList.toggle('light-mode');
-            
-            if (document.body.classList.contains('light-mode')) {
-                themeIcon.classList.remove('fa-sun');
-                themeIcon.classList.add('fa-moon');
-            } else {
-                themeIcon.classList.remove('fa-moon');
-                themeIcon.classList.add('fa-sun');
-            }
-        });
+        if (themeToggleBtn) {
+            const themeIcon = themeToggleBtn.querySelector('i');
+            themeToggleBtn.addEventListener('click', () => {
+                document.body.classList.toggle('light-mode');
+                
+                if (document.body.classList.contains('light-mode')) {
+                    themeIcon.classList.remove('fa-sun');
+                    themeIcon.classList.add('fa-moon');
+                } else {
+                    themeIcon.classList.remove('fa-moon');
+                    themeIcon.classList.add('fa-sun');
+                }
+            });
+        }
 
         // TRANSIÇÃO IN-OUT DA NAVBAR
         const navLinksTrans = document.querySelectorAll('.nav-link-transition');
@@ -920,7 +993,7 @@
                     e.preventDefault();
                     const targetSection = document.querySelector(targetId);
                     
-                    if(targetSection) {
+                    if(targetSection && transitionEl) {
                         transitionEl.classList.add('active');
                         
                         setTimeout(() => {
@@ -949,13 +1022,15 @@
         const contactBg = document.querySelector('.contact-bg');
 
         window.addEventListener('scroll', () => {
-            const rect = contactSection.getBoundingClientRect();
-            const windowHeight = window.innerHeight;
+            if (contactSection && contactBg) {
+                const rect = contactSection.getBoundingClientRect();
+                const windowHeight = window.innerHeight;
 
-            if (rect.top <= windowHeight && rect.bottom >= 0) {
-                let opacity = 1 - (rect.top / windowHeight);
-                opacity = Math.max(0, Math.min(1, opacity * 1.5)); 
-                contactBg.style.opacity = opacity.toFixed(2);
+                if (rect.top <= windowHeight && rect.bottom >= 0) {
+                    let opacity = 1 - (rect.top / windowHeight);
+                    opacity = Math.max(0, Math.min(1, opacity * 1.5)); 
+                    contactBg.style.opacity = opacity.toFixed(2);
+                }
             }
         });
 
@@ -972,27 +1047,34 @@
             }
             
             const selectedTab = document.getElementById(tabName);
-            setTimeout(() => selectedTab.classList.add("active"), 10);
+            if (selectedTab) {
+                setTimeout(() => selectedTab.classList.add("active"), 10);
+            }
             evt.currentTarget.classList.add("active");
         }
 
         // SCROLL REVEAL (Animação de surgimento dos itens)
         const revealElements = document.querySelectorAll('.reveal');
-        const scrollObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('active');
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.15 });
-        revealElements.forEach(el => scrollObserver.observe(el));
+        if ('IntersectionObserver' in window) {
+            const scrollObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.15 });
+            revealElements.forEach(el => scrollObserver.observe(el));
+        } else {
+            // Fallback para navegadores muito antigos
+            revealElements.forEach(el => el.classList.add('active'));
+        }
 
         // NAVBAR ATIVA NO SCROLL MANUAL
         let sections = document.querySelectorAll('section');
         let navLinks = document.querySelectorAll('header .nav-links a');
         window.addEventListener('scroll', () => {
-            if(!transitionEl.classList.contains('active')){
+            if(transitionEl && !transitionEl.classList.contains('active')){
                 sections.forEach(sec => {
                     let top = window.scrollY;
                     let offset = sec.offsetTop - 200;
